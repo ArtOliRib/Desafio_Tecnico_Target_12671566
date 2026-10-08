@@ -5,8 +5,9 @@ independentes, escritos em Java, cada um em sua própria pasta.
 
 ## Requisitos
 
-- **JDK 25 ou superior** (o código usa `java.lang.IO` e método `main` não-público, disponíveis a partir do JDK 21;
-  os três POMs apontam para `source/target` 25).
+- **JDK 25 ou superior**. Os três POMs apontam para `source/target` 25. Os Desafios 1 e 2 usam o
+  `main` não-público e `java.lang.IO` (recursos do JDK 21+); o Desafio 3 usa o `main` tradicional
+  `public static void main(String[])` e `System.out`.
 - **Maven 3.x** (para compilar via linha de comando) *ou* **IntelliJ IDEA** (a configuração de IDE está versionada).
 - As dependências do Jackson ficam no `~/.m2/repository` após o primeiro build.
 
@@ -22,7 +23,7 @@ Desafio_Tecnico_Target_12671566/
 ├── Desafio_Tecnico_1/             # Desafio 1 – Cálculo de comissões de vendas (JSON)
 │   ├── pom.xml                    # Build Maven (Java 25) + dependência jackson-databind 2.17.0
 │   ├── .gitignore                 # Ignora target/, arquivos de IDE e artefatos de build
-│   ├── .idea/                     # Configuração do IntelliJ IDEA (compiler, encodings, vcs, etc.)
+│   ├── .idea/                     # Configuração do IntelliJ IDEA (encodings, misc e vcs versionados)
 │   ├── src/main/arquivos/registros.json   # Dados de entrada: 36 vendas de 4 vendedores
 │   ├── src/main/java/org/arthur/Main.java # Programa: lê o JSON e calcula a comissão de cada venda
 │   └── target/                    # Saída do build (.class) – não versionar
@@ -38,11 +39,13 @@ Desafio_Tecnico_Target_12671566/
 │   ├── src/main/java/org/arthur/metodos/Movimentos.java   # Singleton que registra entradas/saídas e o histórico
 │   └── target/                    # Saída do build (.class) – não versionar
 │
-└── Desafio_Tecnico_3/             # Desafio 3 – Calculadora de juros compostos simples
+└── Desafio_Tecnico_3/             # Desafio 3 – Calculadora de juros simples
     ├── pom.xml                    # Build Maven (Java 25, sem dependências)
     ├── .gitignore                 # Ignora target/, arquivos de IDE e artefatos de build
     ├── .idea/                     # Configuração do IntelliJ IDEA
-    ├── src/main/java/org/arthur/Main.java  # Programa: lê valor + vencimento e calcula juros de 2,5% ao dia
+    ├── src/main/java/org/arthur/Main.java              # Ponto de entrada: prompts, validação e saída
+    ├── src/main/java/org/arthur/leitura/LeitorConsole.java  # Módulo leitura: encapsula o Scanner
+    ├── src/main/java/org/arthur/metodo/CalculadoraJuros.java # Módulo método: cálculo dos juros simples
     └── target/                    # Saída do build (.class) – não versionar
 ```
 
@@ -63,7 +66,7 @@ Desafio_Tecnico_Target_12671566/
 | `src/main/arquivos/registros.json` | Arquivo de dados: objeto com a chave `"vendas"`, contendo 36 vendas (`vendedor` + `valor`) de João Silva, Maria Souza, Carlos Oliveira e Ana Lima. |
 | `src/main/java/org/arthur/Main.java` | Lê o JSON com Jackson (`ObjectMapper.readTree`), percorre o array `vendas` e imprime a comissão de cada venda: **sem comissão** se valor ≤ 100; **1%** se ≤ 500; **5%** acima disso. Caminho do arquivo é relativo (`src/main/arquivos/registros.json`), logo o programa precisa rodar com a pasta do desafio como diretório corrente. |
 | `.gitignore` | Padrão Maven/IDE: ignora `target/`, `.idea/*` selecionado, `.vscode/`, `.DS_Store`, etc. |
-| `.idea/*` | Configurações do IntelliJ (compilador, encoding UTF-8, repositórios de JAR, controle de versão). |
+| `.idea/*` | Configurações do IntelliJ versionadas: `encodings.xml` (UTF-8), `misc.xml` (projeto Maven/JDK 25) e `vcs.xml` (Git). Os arquivos `compiler.xml`, `jarRepositories.xml` e `workspace.xml` existem apenas localmente — são ignorados pelo Git (`.gitignore`). |
 | `target/classes/org/arthur/Main.class` | Bytecode compilado (build anterior). Pode ser regenerado/apagado. |
 
 #### Desafio_Tecnico_2 — Sistema de estoque (menu interativo)
@@ -83,7 +86,9 @@ Desafio_Tecnico_Target_12671566/
 | Arquivo | Resumo |
 |---|---|
 | `pom.xml` | Projeto Maven `org.arthur:Desafio_Tecnico_3:1.0-SNAPSHOT`, compilador Java 25, **sem dependências**. |
-| `src/main/java/org/arthur/Main.java` | Lê um valor em R$ e uma data de vencimento (`dd/MM/yyyy`), valida a data (não pode ser anterior à atual) e calcula juros **simples** de 2,5% ao dia: `total = valor + (valor * 0,025 * dias)`, usando `ChronoUnit.DAYS` para contar os dias. |
+| `src/main/java/org/arthur/Main.java` | Ponto de entrada: lê valor e vencimento, valida a data (não pode ser anterior à atual), chama o cálculo e imprime o resultado. |
+| `src/main/java/org/arthur/leitura/LeitorConsole.java` | Módulo **leitura**: encapsula o `Scanner` (`lerDecimal`, `lerLinha`, `fechar`). |
+| `src/main/java/org/arthur/metodo/CalculadoraJuros.java` | Módulo **método**: juros simples `total = valor + (valor * taxa * dias)`, com `ChronoUnit.DAYS`; retorna uma classe `static` `Resultado` (campos `final` e getters). |
 | `.gitignore`, `.idea/*`, `target/*` | Igual aos demais desafios. |
 
 ---
@@ -118,7 +123,8 @@ java  -cp "target\classes;$cp" org.arthur.Main
 Hello and welcome!
 --- Lista de Vendas ---
 Vendedor: João Silva | Comissão R$60,03 | Valor da venda R$1200.5
-Vendedor: João Silva | Sem Comissão | Valor da venda R$250.3
+Vendedor: João Silva | Comissão R$47,54 | Valor da venda R$950.75
+Vendedor: João Silva | Comissão R$90,00 | Valor da venda R$1800.0
 ...
 ```
 
@@ -183,7 +189,7 @@ mvn compile exec:java -Dexec.mainClass=org.arthur.Main
 
 ```powershell
 cd Desafio_Tecnico_3
-javac -encoding UTF-8 -d target\classes src\main\java\org\arthur\Main.java
+javac -encoding UTF-8 -d target\classes (Get-ChildItem -Recurse -Filter *.java src\main\java).FullName
 java  -cp target\classes org.arthur.Main
 ```
 
@@ -199,8 +205,9 @@ java  -cp target\classes org.arthur.Main
 
 ## Notas gerais de build
 
-- Os três projetos usam `source/target` 25 e compilam sem flags extras (`IO.println` e `void main()`
-  sem `public`/sem `args` são recursos de linguagem já estabilizados a partir do JDK 21).
+- Os três projetos usam `source/target` 25 e compilam sem flags extras. Os Desafios 1 e 2 usam
+  `IO.println` e `main` sem `public`/sem `args` (Java 21+); o Desafio 3 usa o `public static void main(String[] args)`
+  e `System.out` convencionais.
 - Os POMs 1 e 2 dependem do `jackson-databind`, baixado do Maven Central no primeiro `mvn compile`.
 - Para quem preferir não usar Maven, as Opções C acima executam cada desafio direto com `javac`/`java`
   (os JARs do Jackson são os mesmos do repositório local `~/.m2`).
